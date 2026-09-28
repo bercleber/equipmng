@@ -1,0 +1,27 @@
+[project]
+name = "ca-equips"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.19.1",
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "pwdlib[argon2]>=0.3.1",
+    "pymysql>=1.2.0",
+    "sqlmodel>=0.0.42",
+]
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "httpx2>=2.12.0",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+pythonpath = ["."]

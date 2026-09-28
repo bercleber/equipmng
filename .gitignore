@@ -1,0 +1,55 @@
+# Python: bytecode e ambientes virtuais
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Testes, cobertura e ferramentas de análise
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.tox/
+.nox/
+
+# Artefatos de build e empacotamento
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Configurações locais e segredos (templates podem ser versionados)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Bancos locais e logs
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.log
+
+# Arquivos temporários de editores e sistema operacional
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# uv.lock, migrations/ e configurações compartilhadas do editor são versionados.

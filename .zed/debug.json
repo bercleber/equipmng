@@ -1,0 +1,15 @@
+[
+  {
+    "label": "Python Debugger: FastAPI Dev (uv)",
+    "adapter": "Debugpy",
+    "request": "launch",
+    "module": "fastapi",
+    "python": "$ZED_WORKTREE_ROOT/.venv/bin/python",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": ["dev", "src/main.py"],
+    "env": {
+      "PATH": "$ZED_WORKTREE_ROOT/.venv/bin:$PATH",
+      "VIRTUAL_ENV": "$ZED_WORKTREE_ROOT/.venv",
+    },
+  },
+]
