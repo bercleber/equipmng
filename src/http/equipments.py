@@ -20,7 +20,7 @@ router = APIRouter(
     prefix="/equipments", tags=["equipments"],
     dependencies=[Depends(get_current_user)],
 )
-operator = Depends(require_roles(RoleName.GESTOR, RoleName.ADMINISTRADOR))
+admin = Depends(require_roles(RoleName.ADMINISTRADOR))
 
 
 @router.get(
@@ -36,7 +36,7 @@ def list_equipments(serv: EquipmentServiceDep, active: bool | None = None):
     "",
     response_model=EquipmentRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[operator],
+    dependencies=[admin],
 )
 def create(serv: EquipmentServiceDep, data: EquipmentCreate):
     try:
@@ -53,7 +53,7 @@ def create(serv: EquipmentServiceDep, data: EquipmentCreate):
 @router.delete(
     "/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[operator],
+    dependencies=[admin],
 )
 def delete(serv: EquipmentServiceDep, id: int):
     try:
@@ -79,7 +79,7 @@ def list_categories(serv: EquipmentServiceDep):
     "/categories",
     response_model=CategoryRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[operator],
+    dependencies=[admin],
 )
 def create_category(serv: EquipmentServiceDep, data: CategoryCreate):
     try:
@@ -94,7 +94,7 @@ def create_category(serv: EquipmentServiceDep, data: CategoryCreate):
 @router.delete(
     "/categories/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[operator],
+    dependencies=[admin],
 )
 def delete_category(serv: EquipmentServiceDep, id: int):
     try:

@@ -72,6 +72,11 @@ class InvalidUserPromotionError(Exception):
         super().__init__("Only students can be promoted to manager")
 
 
+class UserPermissionDeniedError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Insufficient permissions")
+
+
 class LoanNotFoundError(Exception):
     def __init__(self, id: int) -> None:
         super().__init__(f"No loan with {id} ID was found")

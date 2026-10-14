@@ -36,12 +36,20 @@ class LoanCreate(BaseModel):
         return self
 
 
+class LoanRequesterSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 class LoanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     request_date: datetime
     requested_by: int
+    requester: LoanRequesterSummary
     reviewed_by: int | None
     pickup_date: datetime
     picked_at: datetime | None

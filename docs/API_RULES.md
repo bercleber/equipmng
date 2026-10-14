@@ -14,9 +14,24 @@
 ## Acesso
 
 - Cadastro (`POST /users`) e login são públicos. Cadastro sempre cria aluno inativo.
-- Listar, ativar e desativar usuários exige administrador.
+- Administradores podem listar, consultar por ID, ativar e desativar qualquer usuário.
+- Gestores podem listar e consultar apenas alunos, incluindo os inativos. O filtro
+  `active` continua disponível em `GET /users`.
+- `GET /users/{user_id}` retorna 404 para registros inexistentes ou fora do escopo
+  de consulta do gestor, sem expor dados de gestores e administradores.
+- Gestores podem ativar/desativar apenas alunos; tentar alterar um gestor ou
+  administrador retorna 403, inclusive quando o alvo é o próprio gestor.
+- `PATCH /users/promote/{user_id}` é exclusivo do administrador e promove apenas
+  alunos para gestor. Alvo inexistente retorna 404; alvo que já não é aluno, 409.
+- Alunos não podem acessar as rotas de consulta/administração de usuários.
+- As permissões também são verificadas no serviço. Promoção e alteração de status
+  bloqueiam a linha do usuário até a gravação para serializar essas operações.
 - Consultar equipamentos e categorias exige usuário autenticado e ativo.
-- Criar/desativar equipamentos e criar/excluir categorias exige gestor ou administrador.
+- Criar/desativar equipamentos e criar/excluir categorias exige administrador.
+  Gestores e alunos recebem 403 nessas operações.
+- Consultas de equipamentos e categorias continuam disponíveis para todos os
+  perfis autenticados e ativos. Ainda não há endpoints de edição; quando criados,
+  também devem ser exclusivos do administrador.
 - Todos solicitam empréstimos apenas para si. `requested_by` não é aceito na entrada.
 - Alunos consultam apenas os próprios empréstimos; consulta alheia por ID retorna 404.
 - Gestores e administradores consultam todos e podem avaliar os próprios empréstimos.
@@ -118,6 +133,14 @@ retornam 422. Exemplos: `type=denied` em `/allow` e `type=returned` em `/pickup`
 - Dados históricos sem fuso são tratados como UTC; não há conversão automática de
   registros antigos que eventualmente tenham sido gravados no horário local.
 - `LoanRead.equipments` contém os equipamentos, categoria e estado `active`.
+- `LoanRead.requester` contém somente `{ "id": ..., "name": ... }`, mantendo
+  `requested_by` por compatibilidade. Isso inclui `GET /loans` e
+  `GET /loans/{loan_id}`, além das respostas que compartilham esse schema.
+- Quem pode consultar o empréstimo recebe o nome atual do solicitante,
+  independentemente do perfil atual dele. Isso não concede acesso adicional a
+  `/users`: as restrições de consulta/administração de usuários permanecem iguais.
+- Solicitantes são carregados em lote com `selectinload`, sem consulta individual
+  por empréstimo, selecionando apenas `id` e `name`.
 - `GET /equipments` retorna ativos e inativos com `active` explícito; use
   `?active=true` ou `?active=false` para filtrar.
 - Ativação/desativação de usuários e exclusões retornam 204 sem corpo.

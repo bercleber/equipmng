@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
 from src.models.models import Role, RoleName, User
@@ -36,11 +36,15 @@ class UserRepository:
             self.db.rollback()
             raise
 
-    def find_users(self, active: bool | None = None) -> Sequence[User]:
+    def find_users(
+        self, active: bool | None = None, role_name: RoleName | None = None
+    ) -> Sequence[User]:
         stmt = select(User).options(joinedload(User.role))
 
         if active is not None:
             stmt = stmt.where(User.active == active)
+        if role_name is not None:
+            stmt = stmt.where(User.role.has(Role.name == role_name))
 
         return self.db.exec(stmt).all()
 
@@ -52,6 +56,14 @@ class UserRepository:
         stmt = select(User).options(joinedload(User.role)).where(User.email == email)
         return self.db.exec(stmt).one_or_none()
 
-    def find_by_id_with_role(self, id: int) -> User | None:
-        stmt = select(User).options(joinedload(User.role)).where(User.id == id)
+    def find_by_id_with_role(
+        self, id: int, *, role_name: RoleName | None = None, for_update: bool = False
+    ) -> User | None:
+        loader = selectinload(User.role) if for_update else joinedload(User.role)
+        stmt = select(User).options(loader).where(User.id == id)
+        if role_name is not None:
+            stmt = stmt.where(User.role.has(Role.name == role_name))
+        if for_update:
+            # Lock only the user row and reload any instance cached by authentication.
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
         return self.db.exec(stmt).one_or_none()
