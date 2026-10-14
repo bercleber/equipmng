@@ -13,7 +13,7 @@ from pydantic import (
 
 from src.core.dates import as_utc, utc_now
 from src.models.models import LoanStatus
-from src.schemas.equipments import EquipmentRead
+from src.schemas.equipments import CategorySummary
 
 
 class LoanCreate(BaseModel):
@@ -56,7 +56,6 @@ class LoanRead(BaseModel):
     due_date: datetime
     returned_at: datetime | None
     reason: str | None
-    equipments: list[EquipmentRead]
 
     @field_validator(
         "request_date", "pickup_date", "due_date", "picked_at", "returned_at"
@@ -84,6 +83,18 @@ class LoanRead(BaseModel):
             return LoanStatus.LATE
 
         return LoanStatus.ON_LOAN
+
+
+class LoanEquipmentSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    category: CategorySummary
+
+
+class LoanDetail(LoanRead):
+    equipments: list[LoanEquipmentSummary]
 
 
 class LoanEvaluateType(StrEnum):

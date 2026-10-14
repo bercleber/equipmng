@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from src.core.dependencies import CurrentUserDep, LoanServiceDep, require_roles
 from src.models.models import LoanStatus, RoleName, User
 from src.schemas.loans import (
-    LoanApproval, LoanCreate, LoanDenial, LoanPickup, LoanRead, LoanReturn,
+    LoanApproval, LoanCreate, LoanDenial, LoanDetail, LoanPickup, LoanRead, LoanReturn,
 )
 from src.services.exceptions import LoanNotFoundError, LoanPermissionDeniedError
 
@@ -27,7 +27,7 @@ def list_loans(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(err)) from err
 
 
-@router.get("/{loan_id}", response_model=LoanRead)
+@router.get("/{loan_id}", response_model=LoanDetail)
 def find_by_id(serv: LoanServiceDep, loan_id: int, user: CurrentUserDep):
     try:
         return serv.find_by_id(loan_id, user)

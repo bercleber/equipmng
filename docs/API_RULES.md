@@ -132,7 +132,14 @@ retornam 422. Exemplos: `type=denied` em `/allow` e `type=returned` em `/pickup`
 - Filtros de atraso e serialização usam o relógio UTC da aplicação.
 - Dados históricos sem fuso são tratados como UTC; não há conversão automática de
   registros antigos que eventualmente tenham sido gravados no horário local.
-- `LoanRead.equipments` contém os equipamentos, categoria e estado `active`.
+- Apenas `GET /loans/{loan_id}` usa `LoanDetail` e retorna `equipments`, com
+  `{ "id": ..., "name": ..., "category": { "id": ..., "name": ... } }`
+  para cada equipamento vinculado, incluindo os que foram desativados.
+- `GET /loans` e as respostas de criação/alteração usam `LoanRead`, sem
+  `equipments`. Os demais campos, incluindo `requester`, `requested_by` e
+  `status`, permanecem iguais.
+- No detalhe, equipamentos são carregados com `selectinload` e suas categorias
+  com `joinedload`, evitando consultas N+1. A listagem não carrega equipamentos.
 - `LoanRead.requester` contém somente `{ "id": ..., "name": ... }`, mantendo
   `requested_by` por compatibilidade. Isso inclui `GET /loans` e
   `GET /loans/{loan_id}`, além das respostas que compartilham esse schema.

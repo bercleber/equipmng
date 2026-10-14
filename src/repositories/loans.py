@@ -18,7 +18,6 @@ class LoanRepository:
             self.db.commit()
             self.db.refresh(loan)
             stmt = select(Loan).options(
-                selectinload(Loan.equipments).joinedload(Equipment.category),
                 selectinload(Loan.requester).load_only(User.id, User.name),
             ).where(Loan.id == loan.id)
             return self.db.exec(stmt).one()
@@ -30,7 +29,6 @@ class LoanRepository:
         self, status: LoanStatus | None, requested_by: int | None = None
     ) -> Sequence[Loan]:
         stmt = select(Loan).options(
-            selectinload(Loan.equipments).joinedload(Equipment.category),
             selectinload(Loan.requester).load_only(User.id, User.name),
         )
         if requested_by is not None:
@@ -80,11 +78,14 @@ class LoanRepository:
         self, id: int, requested_by: int | None = None, *, for_update: bool = False
     ) -> Loan | None:
         stmt = select(Loan).options(
-            selectinload(Loan.equipments).joinedload(Equipment.category),
             selectinload(Loan.requester).load_only(User.id, User.name),
         ).where(Loan.id == id)
         if for_update:
             stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        else:
+            stmt = stmt.options(
+                selectinload(Loan.equipments).joinedload(Equipment.category)
+            )
         if requested_by is not None:
             stmt = stmt.where(Loan.requested_by == requested_by)
         return self.db.exec(stmt).one_or_none()
