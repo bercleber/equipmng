@@ -7,6 +7,8 @@ class CategoryCreate(BaseModel):
 
 
 class CategoryRead(CategoryCreate):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
 
 
@@ -23,7 +25,10 @@ class EquipmentCreate(BaseModel):
 
 
 class EquipmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     code: str
+    active: bool
     category: CategorySummary

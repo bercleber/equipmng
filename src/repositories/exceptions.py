@@ -8,3 +8,7 @@ class RepositoryError(Exception):
 
 class DuplicateEntityError(Exception):
     pass
+
+
+class MissingReferenceError(Exception):
+    pass

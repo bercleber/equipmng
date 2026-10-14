@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from src.models.models import Category, Equipment
 from src.repositories.equipments import EquipmentRepository
-from src.repositories.exceptions import DuplicateEntityError, EntityReferencedError
+from src.repositories.exceptions import DuplicateEntityError, EntityReferencedError, MissingReferenceError
 from src.schemas.equipments import CategoryCreate, EquipmentCreate
 from src.services.exceptions import (
     CategoryAlreadyExistsError,
@@ -38,14 +38,18 @@ class EquipmentService:
             raise CategoryInUseError(category.name) from err
 
     def create(self, equipment: EquipmentCreate) -> Equipment:
+        if self.repo.find_category_by_id(equipment.category_id) is None:
+            raise CategoryNotFoundError(equipment.category_id)
         new_equip = Equipment.model_validate(equipment)
         try:
             return self.repo.save(new_equip)
         except DuplicateEntityError as err:
             raise EquipmentAlreadyExistsError(new_equip.code) from err
+        except MissingReferenceError as err:
+            raise CategoryNotFoundError(equipment.category_id) from err
 
-    def list(self) -> Sequence[Equipment]:
-        return self.repo.list()
+    def list(self, active: bool | None = None) -> Sequence[Equipment]:
+        return self.repo.list(active)
 
     def remove(self, id: int) -> Equipment:
         equip = self.repo.find_by_id(id)

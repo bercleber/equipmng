@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -15,9 +16,12 @@ class Settings(BaseSettings):
     db_pass: str
     db_name: str
 
-    # jwt_secret: str
-    # jwt_algorithm: str
-    # jwt_access_token_expire_minutes: int
+    jwt_secret: SecretStr
+    jwt_algorithm: str
+    jwt_access_token_expire_minutes: int
+    jwt_refresh_token_expire_days: int = Field(gt=0)
+
+    cors_origins: list[str] = Field(default_factory=list)
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

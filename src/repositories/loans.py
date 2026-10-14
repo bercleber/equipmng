@@ -1,28 +1,38 @@
 from collections.abc import Sequence
 
-from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from src.models.models import Loan, LoanStatus
+from src.core.dates import database_datetime, utc_now
+from src.models.models import Equipment, Loan, LoanStatus
 
 
 class LoanRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def save(self, loan: Loan):
+    def save(self, loan: Loan) -> Loan:
         try:
             self.db.add(loan)
             self.db.commit()
             self.db.refresh(loan)
-            return loan
+            stmt = select(Loan).options(
+                selectinload(Loan.equipments).joinedload(Equipment.category)
+            ).where(Loan.id == loan.id)
+            return self.db.exec(stmt).one()
         except SQLAlchemyError:
             self.db.rollback()
             raise
 
-    def list(self, status: LoanStatus | None) -> Sequence[Loan]:
-        stmt = select(Loan)
+    def list(
+        self, status: LoanStatus | None, requested_by: int | None = None
+    ) -> Sequence[Loan]:
+        stmt = select(Loan).options(
+            selectinload(Loan.equipments).joinedload(Equipment.category)
+        )
+        if requested_by is not None:
+            stmt = stmt.where(Loan.requested_by == requested_by)
 
         match status:
             case LoanStatus.WAITING_REVISION:
@@ -48,7 +58,7 @@ class LoanRepository:
                     col(Loan.reviewed_by).is_not(None),
                     col(Loan.reason).is_(None),
                     col(Loan.picked_at).is_not(None),
-                    Loan.due_date >= func.now(),
+                    Loan.due_date >= database_datetime(utc_now()),
                     col(Loan.returned_at).is_(None),
                 )
             case LoanStatus.LATE:
@@ -56,7 +66,7 @@ class LoanRepository:
                     col(Loan.reviewed_by).is_not(None),
                     col(Loan.reason).is_(None),
                     col(Loan.picked_at).is_not(None),
-                    Loan.due_date < func.now(),
+                    Loan.due_date < database_datetime(utc_now()),
                     col(Loan.returned_at).is_(None),
                 )
             case LoanStatus.RETURNED:
@@ -64,6 +74,14 @@ class LoanRepository:
 
         return self.db.exec(stmt).all()
 
-    def find_by_id(self, id: int) -> Loan | None:
-        stmt = select(Loan).where(Loan.id == id)
+    def find_by_id(
+        self, id: int, requested_by: int | None = None, *, for_update: bool = False
+    ) -> Loan | None:
+        stmt = select(Loan).options(
+            selectinload(Loan.equipments).joinedload(Equipment.category)
+        ).where(Loan.id == id)
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        if requested_by is not None:
+            stmt = stmt.where(Loan.requested_by == requested_by)
         return self.db.exec(stmt).one_or_none()

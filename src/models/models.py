@@ -1,7 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import StrEnum
 
 from sqlmodel import Field, Relationship, SQLModel
+
+from src.core.dates import database_datetime, utc_now
 
 # Base
 
@@ -57,6 +59,29 @@ class User(SQLMBase, table=True):
     )
 
 
+# Refresh authentication
+
+
+class RefreshSession(SQLModel, table=True):
+    __tablename__ = "refresh_session"
+
+    id: str = Field(primary_key=True, max_length=32)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    created_at: datetime
+    expires_at: datetime = Field(index=True)
+    revoked_at: datetime | None = Field(default=None)
+
+
+class RefreshToken(SQLModel, table=True):
+    __tablename__ = "refresh_token"
+
+    token_hash: str = Field(primary_key=True, max_length=64)
+    session_id: str = Field(
+        foreign_key="refresh_session.id", ondelete="CASCADE", max_length=32, index=True
+    )
+    used_at: datetime | None = Field(default=None)
+
+
 # Category
 
 
@@ -96,7 +121,7 @@ class LoanStatus(StrEnum):
 
 
 class Loan(SQLMBase, table=True):
-    request_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    request_date: datetime = Field(default_factory=lambda: database_datetime(utc_now()))
     requested_by: int = Field(foreign_key="user.id")
     reviewed_by: int | None = Field(default=None, foreign_key="user.id")
     pickup_date: datetime = Field()

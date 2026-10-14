@@ -3,51 +3,52 @@ from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 from src.schemas.equipments import CategorySummary, EquipmentCreate, EquipmentRead
+from src.services.exceptions import CategoryNotFoundError
 
 
 def test_create_equipment_success(
-    client: TestClient,
+    operator_client: TestClient,
     equipment_service: MagicMock,
 ) -> None:
     request_body = {
         "name": "Notebook",
         "category_id": 1,
-        "quantity": 2,
+        "code": "NB-1",
     }
     equipment_service.create.return_value = EquipmentRead(
         id=3,
         name="Notebook",
-        codes=["3-1", "3-2"],
+        code="NB-1",
+        active=True,
         category=CategorySummary(id=1, name="Computers"),
-        quantity=2,
     )
 
-    response = client.post("/equipments", json=request_body)
+    response = operator_client.post("/equipments", json=request_body)
 
     assert response.status_code == 201
     assert response.json() == {
         "id": 3,
         "name": "Notebook",
-        "codes": ["3-1", "3-2"],
+        "code": "NB-1",
+        "active": True,
         "category": {
             "id": 1,
             "name": "Computers",
         },
-        "quantity": 2,
     }
     equipment_service.create.assert_called_once_with(EquipmentCreate(**request_body))
 
 
 def test_create_equipment_validation_error(
-    client: TestClient,
+    operator_client: TestClient,
     equipment_service: MagicMock,
 ) -> None:
-    response = client.post(
+    response = operator_client.post(
         "/equipments",
         json={
             "name": "Notebook",
-            "category_id": 1,
-            "quantity": 0,
+            "category_id": 0,
+            "code": "NB-1",
         },
     )
 
@@ -55,20 +56,20 @@ def test_create_equipment_validation_error(
     equipment_service.create.assert_not_called()
 
 
-def test_create_equipment_returns_server_error_when_service_fails(
-    client: TestClient,
+def test_create_equipment_returns_not_found_for_missing_category(
+    operator_client: TestClient,
     equipment_service: MagicMock,
 ) -> None:
-    equipment_service.create.side_effect = ValueError("Category not found")
+    equipment_service.create.side_effect = CategoryNotFoundError(999)
 
-    response = client.post(
+    response = operator_client.post(
         "/equipments",
         json={
             "name": "Notebook",
             "category_id": 999,
-            "quantity": 1,
+            "code": "NB-1",
         },
     )
 
-    assert response.status_code == 500
-    assert response.json() == {"detail": "Category not found"}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "No category with 999 ID was found"}

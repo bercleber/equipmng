@@ -1,3 +1,18 @@
+class InvalidCredentialsError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Invalid email or password")
+
+
+class InvalidRefreshTokenError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Invalid or expired refresh token")
+
+
+class InactiveUserError(Exception):
+    def __init__(self) -> None:
+        super().__init__("User is inactive")
+
+
 class CategoryNotFoundError(Exception):
     def __init__(self, id: int) -> None:
         super().__init__(f"No category with {id} ID was found")
@@ -26,6 +41,35 @@ class EquipmentNotFoundError(Exception):
 class NoEquipmentsLoanError(Exception):
     def __init__(self, *args: object) -> None:
         super().__init__("Cannot create a loan without any equipment")
+
+
+class LoanPermissionDeniedError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Insufficient permissions")
+
+
+class InvalidLoanStateError(Exception):
+    pass
+
+
+class LoanEquipmentUnavailableError(Exception):
+    def __init__(self, ids: list[int]) -> None:
+        super().__init__(f"Equipment does not exist or is inactive: {ids}")
+
+
+class UserNotFoundError(Exception):
+    def __init__(self, id: int) -> None:
+        super().__init__(f"No user with {id} ID was found")
+
+
+class UserAlreadyExistsError(Exception):
+    def __init__(self) -> None:
+        super().__init__("A user with this email or phone already exists")
+
+
+class InvalidUserPromotionError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Only students can be promoted to manager")
 
 
 class LoanNotFoundError(Exception):

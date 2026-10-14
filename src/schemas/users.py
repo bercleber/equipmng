@@ -1,9 +1,11 @@
-from pydantic import BaseModel, EmailStr, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
 from src.models.models import RoleName
 
 
 class RoleSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: RoleName
 
@@ -20,6 +22,8 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     email: str

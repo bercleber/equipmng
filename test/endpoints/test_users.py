@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from src.models.models import Role, RoleName, User
 from src.schemas.users import UserCreate
+from src.services.exceptions import UserAlreadyExistsError
 
 
 def test_create_user_success(
@@ -67,11 +68,11 @@ def test_create_user_validation(
     user_service.create.assert_not_called()
 
 
-def test_create_user_returns_bad_request_when_service_fails(
+def test_create_user_returns_conflict_for_duplicate(
     client: TestClient,
     user_service: MagicMock,
 ) -> None:
-    user_service.create.side_effect = ValueError("User already exists")
+    user_service.create.side_effect = UserAlreadyExistsError()
 
     response = client.post(
         "/users",
@@ -83,5 +84,5 @@ def test_create_user_returns_bad_request_when_service_fails(
         },
     )
 
-    assert response.status_code == 400
-    assert response.json() == {"detail": "User already exists"}
+    assert response.status_code == 409
+    assert response.json() == {"detail": "A user with this email or phone already exists"}
