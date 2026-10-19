@@ -105,14 +105,58 @@ substituem testes de concorrência nesse banco.
 
 ## Empréstimos
 
-- A criação falha com 409 se qualquer equipamento não existir ou estiver inativo.
+- A criação falha com 409 se qualquer equipamento não existir, estiver inativo
+  ou já estiver reservado por um empréstimo em aberto. Nada é criado parcialmente.
 - IDs devem ser positivos. Repetições são consolidadas em um único item.
 - Aprovação e negativa são permitidas antes da retirada, incluindo reavaliações.
+  Aprovação/reaprovação verifica a disponibilidade novamente, excluindo o próprio
+  empréstimo da consulta de conflitos.
 - Negativa exige motivo não vazio. Aprovação limpa o motivo anterior.
 - Retirada exige aprovação, ausência de negativa e nenhuma retirada/devolução anterior.
 - Devolução exige retirada e não pode ser repetida.
 - Avaliação após retirada/devolução e demais transições inválidas retornam 409.
-- Alterações de estado bloqueiam a linha do empréstimo durante a transação (MySQL).
+- Criação e alterações de estado bloqueiam os equipamentos em ordem de ID, antes
+  de bloquear o empréstimo existente, até o commit/rollback (MySQL). A verificação
+  de conflitos usa leitura com bloqueio para enxergar gravações concorrentes já
+  confirmadas, mesmo sob REPEATABLE READ.
+
+### Disponibilidade de equipamentos
+
+- `GET /equipments?available=true` retorna somente equipamentos ativos sem vínculo
+  com empréstimos aguardando análise, aguardando retirada, em uso ou atrasados.
+- Negados e devolvidos não bloqueiam. As datas não participam dessa decisão:
+  uma solicitação futura também reserva o equipamento imediatamente.
+- A disponibilidade é calculada com `NOT EXISTS` nas tabelas existentes, sem
+  coluna adicional, sem alterar `active` e sem consultas N+1.
+- `GET /equipments` sem `available` mantém o inventário atual. `available=false`
+  retorna os indisponíveis (inativos ou reservados). O filtro `active`, quando
+  informado, é aplicado junto com `available`.
+- O formato dos equipamentos e as permissões das rotas não mudaram. A negativa
+  ou devolução libera o equipamento se ele continuar ativo e não houver outro
+  empréstimo bloqueante. Conflitos antigos não são corrigidos automaticamente.
+- Não é necessária migração. As alterações não foram validadas por execução de
+  testes; a concorrência deve ser verificada em MySQL, não apenas SQLite.
+
+#### Integração do frontend
+
+No formulário de empréstimo, carregue as opções por
+`GET /equipments?available=true`, com o Bearer token habitual. Não envie datas
+para filtrar disponibilidade; elas continuam obrigatórias no `POST /loans`.
+O corpo da criação permanece igual, incluindo `equipments: [id, ...]`.
+
+Se criação ou aprovação retornar 409 com `equipment_ids`, destaque os IDs
+indisponíveis, avise o usuário e atualize a lista. Não remova seleções
+silenciosamente. Exemplo de erro:
+
+```json
+{
+  "detail": "Equipment does not exist, is inactive or is already reserved: [12]",
+  "equipment_ids": [12]
+}
+```
+
+Atualize a lista após criar, negar ou devolver um empréstimo. Na tela de
+inventário, continue usando `GET /equipments` sem o filtro de disponibilidade.
 
 ### Corpo das ações
 

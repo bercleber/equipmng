@@ -10,9 +10,17 @@ logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(InvalidLoanStateError)
-    @app.exception_handler(LoanEquipmentUnavailableError)
     async def loan_conflict(request: Request, err: Exception) -> JSONResponse:
         return JSONResponse(status_code=409, content={"detail": str(err)})
+
+    @app.exception_handler(LoanEquipmentUnavailableError)
+    async def equipment_unavailable(
+        request: Request, err: LoanEquipmentUnavailableError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={"detail": str(err), "equipment_ids": err.ids},
+        )
 
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, err: Exception) -> JSONResponse:

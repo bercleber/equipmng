@@ -54,7 +54,8 @@ class InvalidLoanStateError(Exception):
 
 class LoanEquipmentUnavailableError(Exception):
     def __init__(self, ids: list[int]) -> None:
-        super().__init__(f"Equipment does not exist or is inactive: {ids}")
+        self.ids = ids
+        super().__init__(f"Equipment does not exist, is inactive or is already reserved: {ids}")
 
 
 class UserNotFoundError(Exception):

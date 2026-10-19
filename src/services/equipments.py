@@ -48,8 +48,10 @@ class EquipmentService:
         except MissingReferenceError as err:
             raise CategoryNotFoundError(equipment.category_id) from err
 
-    def list(self, active: bool | None = None) -> Sequence[Equipment]:
-        return self.repo.list(active)
+    def list(
+        self, active: bool | None = None, available: bool | None = None
+    ) -> Sequence[Equipment]:
+        return self.repo.list(active, available)
 
     def remove(self, id: int) -> Equipment:
         equip = self.repo.find_by_id(id)

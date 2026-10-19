@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from src.core.dependencies import EquipmentServiceDep, get_current_user, require_roles
 from src.models.models import RoleName
@@ -28,8 +28,14 @@ admin = Depends(require_roles(RoleName.ADMINISTRADOR))
     response_model=list[EquipmentRead],
     status_code=status.HTTP_200_OK,
 )
-def list_equipments(serv: EquipmentServiceDep, active: bool | None = None):
-    return serv.list(active)
+def list_equipments(
+    serv: EquipmentServiceDep,
+    active: bool | None = None,
+    available: bool | None = Query(
+        None, description="Disponível: ativo e sem empréstimo em aberto, independentemente das datas"
+    ),
+):
+    return serv.list(active, available)
 
 
 @router.post(

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 from src.core.dates import database_datetime, utc_now
-from src.models.models import Loan, LoanStatus, RoleName, User
+from src.models.models import Equipment, Loan, LoanStatus, RoleName, User
 from src.repositories.equipments import EquipmentRepository
 from src.repositories.loans import LoanRepository
 from src.schemas.loans import (
@@ -39,14 +39,35 @@ class LoanService:
         if self._requested_by_filter(user) is not None:
             raise LoanPermissionDeniedError()
 
-    def create(self, loan: LoanCreate, user: User) -> Loan:
-        self._requested_by_filter(user)
-        equip_ids = list(set(loan.equipments))
-
-        equips = self.equip_repo.find_by_ids(equip_ids)
-        unavailable = set(equip_ids) - {equip.id for equip in equips}
+    def _require_available(
+        self, ids: Sequence[int], equips: Sequence[Equipment],
+        *, exclude_loan_id: int | None = None,
+    ) -> None:
+        unavailable = set(ids) - {equip.id for equip in equips if equip.active}
+        unavailable.update(
+            self.equip_repo.find_conflicting_ids(ids, exclude_loan_id=exclude_loan_id)
+        )
         if unavailable:
             raise LoanEquipmentUnavailableError(sorted(unavailable))
+
+    def _lock_loan(self, id: int) -> tuple[Loan, Sequence[Equipment]]:
+        # Equipment membership cannot be edited by the API. Read it first, then
+        # consistently lock equipment before the loan in every lifecycle action.
+        snapshot = self.loan_repo.find_by_id(id)
+        if snapshot is None:
+            raise LoanNotFoundError(id)
+        ids = sorted({equip.id for equip in snapshot.equipments})
+        equips = self.equip_repo.lock_by_ids(ids)
+        loan = self.loan_repo.find_by_id(id, for_update=True)
+        if loan is None:
+            raise LoanNotFoundError(id)
+        return loan, equips
+
+    def create(self, loan: LoanCreate, user: User) -> Loan:
+        self._requested_by_filter(user)
+        equip_ids = sorted(set(loan.equipments))
+        equips = self.equip_repo.lock_by_ids(equip_ids)
+        self._require_available(equip_ids, equips)
 
         loan_data = loan.model_dump(exclude={"equipments"})
         loan_data["pickup_date"] = database_datetime(loan.pickup_date)
@@ -70,11 +91,14 @@ class LoanService:
 
     def evaluate(self, id: int, eval: LoanEvaluate, user: User) -> Loan:
         self._require_operator(user)
-        loan = self.loan_repo.find_by_id(id, for_update=True)
-        if loan is None:
-            raise LoanNotFoundError(id)
+        loan, equips = self._lock_loan(id)
         if loan.picked_at is not None or loan.returned_at is not None:
             raise InvalidLoanStateError("A collected or returned loan cannot be evaluated")
+
+        if eval.type == LoanEvaluateType.ACCEPTED:
+            self._require_available(
+                [equip.id for equip in equips], equips, exclude_loan_id=id
+            )
 
         loan.reviewed_by = user.id
 
@@ -84,9 +108,7 @@ class LoanService:
 
     def record(self, id: int, event: LoanEvent, user: User) -> Loan:
         self._require_operator(user)
-        loan = self.loan_repo.find_by_id(id, for_update=True)
-        if loan is None:
-            raise LoanNotFoundError(id)
+        loan, _ = self._lock_loan(id)
         if loan.returned_at is not None:
             raise InvalidLoanStateError("Loan was already returned")
 
